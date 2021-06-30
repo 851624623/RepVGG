@@ -11,7 +11,7 @@ def conv_bn(in_channels, out_channels, kernel_size, stride, padding, groups=1):
     result.add_module('bn', nn.BatchNorm2d(num_features=out_channels))
     return result
 
-class RepVGGBlock(nn.Module):
+class RepVGGBlock(nn.Module): # 3*3 1*1 identity
 
     def __init__(self, in_channels, out_channels, kernel_size,
                  stride=1, padding=0, dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
@@ -23,7 +23,7 @@ class RepVGGBlock(nn.Module):
         assert kernel_size == 3
         assert padding == 1
 
-        padding_11 = padding - kernel_size // 2
+        padding_11 = padding - kernel_size // 2 # 应该是为0
 
         self.nonlinearity = nn.ReLU()
 
@@ -63,7 +63,7 @@ class RepVGGBlock(nn.Module):
     #           loss += weight_decay_coefficient * 0.5 * blk.get_cust_L2()
     #       optimizer.zero_grad()
     #       loss.backward()
-    def get_custom_L2(self):
+    def get_custom_L2(self): # 自定义的权重衰减
         K3 = self.rbr_dense.conv.weight
         K1 = self.rbr_1x1.conv.weight
         t3 = (self.rbr_dense.bn.weight / ((self.rbr_dense.bn.running_var + self.rbr_dense.bn.eps).sqrt())).reshape(-1, 1, 1, 1).detach()
@@ -146,7 +146,7 @@ class RepVGG(nn.Module):
         assert len(width_multiplier) == 4
 
         self.deploy = deploy
-        self.override_groups_map = override_groups_map or dict()
+        self.override_groups_map = override_groups_map or dict() # 如果都是空的，返回后面的
         self.use_se = use_se
 
         assert 0 not in self.override_groups_map
@@ -166,12 +166,12 @@ class RepVGG(nn.Module):
     def _make_stage(self, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
         blocks = []
-        for stride in strides:
-            cur_groups = self.override_groups_map.get(self.cur_layer_idx, 1)
+        for stride in strides: # 从第二个开始，输入、输出通道相同
+            cur_groups = self.override_groups_map.get(self.cur_layer_idx, 1) # dict.get(key, default) 如果指定键不存在，返回默认值
             blocks.append(RepVGGBlock(in_channels=self.in_planes, out_channels=planes, kernel_size=3,
                                       stride=stride, padding=1, groups=cur_groups, deploy=self.deploy, use_se=self.use_se))
             self.in_planes = planes
-            self.cur_layer_idx += 1
+            self.cur_layer_idx += 1 # 只有奇数到才能对应stride为2的情况，如果有分组卷积，隔一个有个分组卷积
         return nn.Sequential(*blocks)
 
     def forward(self, x):
