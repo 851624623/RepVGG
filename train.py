@@ -281,7 +281,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler, 
         output = model(images)
         loss = criterion(output, target)
 
-        if args.custwd: # 没太懂
+        if args.custwd: # 自定义的weight decay
             for module in model.modules():
                 if hasattr(module, 'get_custom_L2'):
                     loss += args.weight_decay * 0.5 * module.get_custom_L2()

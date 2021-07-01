@@ -66,12 +66,14 @@ class RepVGGBlock(nn.Module): # 3*3 1*1 identity
     def get_custom_L2(self): # 自定义的权重衰减
         K3 = self.rbr_dense.conv.weight
         K1 = self.rbr_1x1.conv.weight
-        t3 = (self.rbr_dense.bn.weight / ((self.rbr_dense.bn.running_var + self.rbr_dense.bn.eps).sqrt())).reshape(-1, 1, 1, 1).detach()
-        t1 = (self.rbr_1x1.bn.weight / ((self.rbr_1x1.bn.running_var + self.rbr_1x1.bn.eps).sqrt())).reshape(-1, 1, 1, 1).detach()
+        t3 = (self.rbr_dense.bn.weight / ((self.rbr_dense.bn.running_var + self.rbr_dense.bn.eps).sqrt())).reshape(-1, 1, 1, 1).detach() # c2 -> c2,1,1,1
+        t1 = (self.rbr_1x1.bn.weight / ((self.rbr_1x1.bn.running_var + self.rbr_1x1.bn.eps).sqrt())).reshape(-1, 1, 1, 1).detach() # c2 -> c2,1,1,1
 
+        # 3*3kernel的外圈八个值的l2
         l2_loss_circle = (K3 ** 2).sum() - (K3[:, :, 1:2, 1:2] ** 2).sum()      # The L2 loss of the "circle" of weights in 3x3 kernel. Use regular L2 on them.
+        # 合并bn后的weight，包括1*1和3*3的中间数值
         eq_kernel = K3[:, :, 1:2, 1:2] * t3 + K1 * t1                           # The equivalent resultant central point of 3x3 kernel.
-        l2_loss_eq_kernel = (eq_kernel ** 2 / (t3 ** 2 + t1 ** 2)).sum()        # Normalize for an L2 coefficient comparable to regular L2.
+        l2_loss_eq_kernel = (eq_kernel ** 2 / (t3 ** 2 + t1 ** 2)).sum()        # 这句是解释！ Normalize for an L2 coefficient comparable to regular L2.
         return l2_loss_eq_kernel + l2_loss_circle
 
 
@@ -175,7 +177,7 @@ class RepVGG(nn.Module):
         return nn.Sequential(*blocks)
 
     def forward(self, x):
-        out = self.stage0(x)
+        out = self.stage0(x) # 因为分辨率大，消耗时间多，所以只用了一层
         out = self.stage1(out)
         out = self.stage2(out)
         out = self.stage3(out)
@@ -190,7 +192,7 @@ optional_groupwise_layers = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]
 g2_map = {l: 2 for l in optional_groupwise_layers}
 g4_map = {l: 4 for l in optional_groupwise_layers}
 
-def create_RepVGG_A0(deploy=False):
+def create_RepVGG_A0(deploy=False): # num_blocks中1是因为最后通道多，所以只用一层；width_multiplier中64a,128a,256a,512b
     return RepVGG(num_blocks=[2, 4, 14, 1], num_classes=1000,
                   width_multiplier=[0.75, 0.75, 0.75, 2.5], override_groups_map=None, deploy=deploy)
 
