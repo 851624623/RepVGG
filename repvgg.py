@@ -297,3 +297,11 @@ def repvgg_model_convert(model:torch.nn.Module, save_path=None, do_copy=True):
     if save_path is not None:
         torch.save(model.state_dict(), save_path)
     return model
+
+
+
+if __name__ == '__main__':
+    model_ = get_RepVGG_func_by_name('RepVGG-B3g4')
+    model = model_()
+    print(model)
+    # print(model.get_equivalent_kernel_bias)

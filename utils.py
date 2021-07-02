@@ -26,7 +26,7 @@ class AverageMeter(object):
 
     def __str__(self):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
-        return fmtstr.format(**self.__dict__)
+        return fmtstr.format(**self.__dict__) # self.__dict__代表类的属性
 
 
 class ProgressMeter(object):
@@ -53,7 +53,7 @@ def accuracy(output, target, topk=(1,)):
         batch_size = target.size(0)
 
         _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
+        pred = pred.t() # (n, k) -> (k, n)
         correct = pred.eq(target.view(1, -1).expand_as(pred))
 
         res = []
