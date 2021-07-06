@@ -12,6 +12,7 @@ from utils import accuracy, ProgressMeter, AverageMeter
 from repvgg import get_RepVGG_func_by_name, RepVGGBlock
 from utils import load_checkpoint, get_ImageNet_train_dataset, get_default_train_trans
 
+#   insert BN after the converted 3x3 conv layers because QAT with torch.quantization requires BN
 #   Insert BN into an inference-time RepVGG (e.g., for quantization-aware training).
 #   Get the mean and std on every conv3x3 (before the bias-adding) on the train set. Then use such data to initialize BN layers and insert them after conv3x3.
 #   May, 07, 2021
@@ -70,7 +71,7 @@ class BiasAdd(nn.Module):
     def forward(self, x):
         return x + self.bias.view(1, -1, 1, 1)
 
-def switch_repvggblock_to_bnstat(model):
+def switch_repvggblock_to_bnstat(model):  # 重新构建了均值和方差
     for n, block in model.named_modules():
         if isinstance(block, RepVGGBlock):
             print('switch to BN Statistics: ', n)
@@ -104,6 +105,7 @@ def switch_bnstat_to_convbn(model):
             bn.running_var = block.rbr_reparam.bnstat.running_var.squeeze()
             std = (bn.running_var + bn.eps).sqrt()
             conv.weight.data = block.rbr_reparam.conv.weight.data
+            # 这两行不太懂
             bn.weight.data = std
             bn.bias.data = block.rbr_reparam.biasadd.bias.data + bn.running_mean  # Initialize gamma = std and beta = bias + mean
 

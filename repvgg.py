@@ -97,7 +97,7 @@ class RepVGGBlock(nn.Module): # 3*3 1*1 identity
     def _fuse_bn_tensor(self, branch):
         if branch is None:
             return 0, 0
-        if isinstance(branch, nn.Sequential):
+        if isinstance(branch, nn.Sequential):  # 主要是rbr_dense和rbr_1x1走这里
             kernel = branch.conv.weight
             running_mean = branch.bn.running_mean
             running_var = branch.bn.running_var
@@ -108,7 +108,7 @@ class RepVGGBlock(nn.Module): # 3*3 1*1 identity
             assert isinstance(branch, nn.BatchNorm2d)
             if not hasattr(self, 'id_tensor'):
                 input_dim = self.in_channels // self.groups
-                kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)
+                kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)  # bn的in_channel和out_channel一样，所以第一个维度用的in_channel
                 for i in range(self.in_channels):
                     kernel_value[i, i % input_dim, 1, 1] = 1
                 self.id_tensor = torch.from_numpy(kernel_value).to(branch.weight.device)
@@ -303,5 +303,10 @@ def repvgg_model_convert(model:torch.nn.Module, save_path=None, do_copy=True):
 if __name__ == '__main__':
     model_ = get_RepVGG_func_by_name('RepVGG-B3g4')
     model = model_()
-    print(model)
+    for name, module in model.named_children():
+        if name in ['stage3']:
+            # print(module[15])
+            print(module[15].get_equivalent_kernel_bias())
+        # print(name)
+    # print(model)
     # print(model.get_equivalent_kernel_bias)
