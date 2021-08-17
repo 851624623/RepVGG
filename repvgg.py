@@ -292,6 +292,7 @@ def repvgg_model_convert(model:torch.nn.Module, save_path=None, do_copy=True):
     if do_copy:
         model = copy.deepcopy(model)
     for module in model.modules():
+        # hasattr的实参是一个对象和一个字符串。
         if hasattr(module, 'switch_to_deploy'):
             module.switch_to_deploy()
     if save_path is not None:

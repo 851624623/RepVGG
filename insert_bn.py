@@ -71,7 +71,7 @@ class BiasAdd(nn.Module):
     def forward(self, x):
         return x + self.bias.view(1, -1, 1, 1)
 
-def switch_repvggblock_to_bnstat(model):  # 重新构建了均值和方差
+def switch_repvggblock_to_bnstat(model):  # 重新构建了BN(均值和方差)
     for n, block in model.named_modules():
         if isinstance(block, RepVGGBlock):
             print('switch to BN Statistics: ', n)
@@ -105,7 +105,6 @@ def switch_bnstat_to_convbn(model):
             bn.running_var = block.rbr_reparam.bnstat.running_var.squeeze()
             std = (bn.running_var + bn.eps).sqrt()
             conv.weight.data = block.rbr_reparam.conv.weight.data
-            # 这两行不太懂
             bn.weight.data = std
             bn.bias.data = block.rbr_reparam.biasadd.bias.data + bn.running_mean  # Initialize gamma = std and beta = bias + mean
 
